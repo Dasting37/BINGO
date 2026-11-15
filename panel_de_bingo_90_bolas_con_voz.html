@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo Master 90 - Panel y Voz</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter y Outfit para números nítidos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos personalizados para lograr el efecto de esfera 3D realista y animaciones fluidas */
+        body {
+            background: radial-gradient(circle at top left, #0f172a, #090d16 70%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+
+        /* Estilo base de esfera de Bingo 3D */
+        .bingo-sphere {
+            position: relative;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                inset -6px -8px 16px rgba(0, 0, 0, 0.55),
+                inset 4px 4px 12px rgba(255, 255, 255, 0.45),
+                0 10px 20px -5px rgba(0, 0, 0, 0.65);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            user-select: none;
+        }
+
+        /* Reflejo especular superior de la esfera */
+        .bingo-sphere::after {
+            content: '';
+            position: absolute;
+            top: 8%;
+            left: 18%;
+            width: 32%;
+            height: 18%;
+            border-radius: 50%;
+            background: radial-gradient(ellipse at center, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 75%);
+            transform: rotate(-28deg);
+            pointer-events: none;
+        }
+
+        /* Centro blanco clásico de bola de bingo */
+        .bingo-sphere-inner {
+            background: radial-gradient(circle at 35% 35%, #ffffff 0%, #f1f5f9 75%, #cbd5e1 100%);
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0f172a;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 900;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.25), 0 1px 2px rgba(255,255,255,0.5);
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Línea sutil debajo del número (como en bolas reales para distinguir 6 y 9) */
+        .number-underline {
+            position: relative;
+        }
+        .number-underline::after {
+            content: '';
+            position: absolute;
+            bottom: 12%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 45%;
+            height: 3px;
+            background-color: currentColor;
+            border-radius: 2px;
+            opacity: 0.7;
+        }
+
+        /* 9 Paletas de color diferenciadas por decena (1-9, 10-19, 20-29, 30-39, 40-49, 50-59, 60-69, 70-79, 80-90) */
+        .ball-dec-0 { background: radial-gradient(circle at 30% 30%, #ff7b7b, #dc2626 60%, #7f1d1d 100%); } /* 1-9 Rojo */
+        .ball-dec-1 { background: radial-gradient(circle at 30% 30%, #fdba74, #ea580c 60%, #7c2d12 100%); } /* 10-19 Naranja */
+        .ball-dec-2 { background: radial-gradient(circle at 30% 30%, #fde047, #ca8a04 60%, #713f12 100%); } /* 20-29 Amarillo/Ámbar */
+        .ball-dec-3 { background: radial-gradient(circle at 30% 30%, #4ade80, #16a34a 60%, #14532d 100%); } /* 30-39 Verde */
+        .ball-dec-4 { background: radial-gradient(circle at 30% 30%, #22d3ee, #0891b2 60%, #164e63 100%); } /* 40-49 Turquesa/Cian */
+        .ball-dec-5 { background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb 60%, #1e3a8a 100%); } /* 50-59 Azul */
+        .ball-dec-6 { background: radial-gradient(circle at 30% 30%, #a78bfa, #7c3aed 60%, #4c1d95 100%); } /* 60-69 Índigo/Violeta */
+        .ball-dec-7 { background: radial-gradient(circle at 30% 30%, #f472b6, #db2777 60%, #831843 100%); } /* 70-79 Magenta/Rosa */
+        .ball-dec-8 { background: radial-gradient(circle at 30% 30%, #34d399, #059669 60%, #064e3b 100%); } /* 80-90 Esmeralda/Dorado */
+        .ball-color-empty { background: radial-gradient(circle at 30% 30%, #334155, #1e293b 65%, #0f172a 100%); }
+
+        /* Animación de entrada para nueva bola principal */
+        @keyframes popBall {
+            0% { transform: scale(0.3) rotate(-180deg); opacity: 0; }
+            70% { transform: scale(1.08) rotate(12deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        .animate-pop-ball {
+            animation: popBall 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* Animación de entrada para esferas en el historial */
+        @keyframes slideInSphere {
+            0% { transform: scale(0.4) translateY(-10px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .animate-sphere-item {
+            animation: slideInSphere 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        /* Estilo de celda activa en el tablero */
+        .board-cell-active {
+            box-shadow: 0 0 15px rgba(250, 204, 21, 0.45), inset 0 1px 1px rgba(255,255,255,0.4);
+            transform: scale(1.04);
+        }
+
+        /* Scrollbar personalizada elegante para el historial */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(71, 85, 105, 0.8);
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(100, 116, 139, 1);
+        }
+
+        /* Ocultar flechas por defecto del input numérico */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-amber-500 selection:text-slate-950">
+
+    <!-- Notificación Toast Flotante (Reemplazo moderno a alert) -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
+
+    <!-- Modal de Confirmación Personalizado (Sin confirm() nativo) -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full p-6 shadow-2xl transform transition-all">
+            <div class="flex items-center gap-3 text-amber-400 mb-3">
+                <div class="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white">¿Reiniciar partida?</h3>
+            </div>
+            <p class="text-slate-300 text-sm leading-relaxed mb-6">
+                Se borrarán todas las bolas cantadas y el tablero volverá a cero. Esta acción no se puede deshacer.
+            </p>
+            <div class="flex items-center justify-end gap-3">
+                <button id="cancel-reset-btn" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-sm transition cursor-pointer">
+                    Cancelar
+                </button>
+                <button id="confirm-reset-btn" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-sm shadow-lg shadow-rose-600/25 transition cursor-pointer">
+                    Sí, reiniciar todo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal -->
+    <div class="max-w-[1440px] mx-auto px-3 sm:px-6 py-4 sm:py-6">
+        
+        <!-- Cabecera / Barra Superior -->
+        <header class="bg-slate-900/85 backdrop-blur-md border border-slate-800 rounded-2xl p-4 mb-5 shadow-xl flex flex-col lg:flex-row items-center justify-between gap-4">
+            <!-- Logo y Título -->
+            <div class="flex items-center gap-3.5 w-full lg:w-auto justify-between lg:justify-start">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20 text-slate-950 font-display font-black text-xl">
+                        90
+                    </div>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-display font-extrabold tracking-tight text-white flex items-center gap-2">
+                            BINGO <span class="text-amber-400">MASTER</span>
+                        </h1>
+                        <p class="text-xs text-slate-400">Panel de Control & Locutor de Voz</p>
+                    </div>
+                </div>
+
+                <!-- Contador móvil -->
+                <div class="lg:hidden bg-slate-800/90 border border-slate-700/70 px-3.5 py-1.5 rounded-xl text-right">
+                    <span class="text-[11px] uppercase tracking-wider text-slate-400 block">Jugadas</span>
+                    <span id="counter-mobile" class="font-display font-extrabold text-lg text-amber-400">0 <span class="text-slate-500 text-sm">/ 90</span></span>
+                </div>
+            </div>
+
+            <!-- Controles de Voz y Configuración -->
+            <div class="flex flex-wrap items-center justify-center lg:justify-end gap-2 w-full lg:w-auto">
+                
+                <!-- Selector de Estilo de Canto -->
+                <div class="flex items-center bg-slate-800/90 border border-slate-700/70 rounded-xl px-3 py-1.5 text-xs sm:text-sm" title="Estilo de canto del locutor">
+                    <i class="fa-solid fa-microphone-lines text-amber-400 mr-2"></i>
+                    <select id="voice-style" class="bg-transparent text-slate-200 font-medium focus:outline-none cursor-pointer pr-1">
+                        <option value="traditional" class="bg-slate-900">Canto Tradicional ("Juega el 25, dos y cinco...")</option>
+                        <option value="rhyme" class="bg-slate-900">Tradicional + Dicho Popular</option>
+                        <option value="fast" class="bg-slate-900">Rápido ("El veinticinco, dos y cinco")</option>
+                    </select>
+                </div>
+
+                <!-- Control de Velocidad de Voz -->
+                <div class="flex items-center bg-slate-800/90 border border-slate-700/70 rounded-xl px-2.5 py-1.5 text-xs sm:text-sm" title="Velocidad de lectura">
+                    <i class="fa-solid fa-gauge-high text-amber-400 mr-1.5"></i>
+                    <select id="voice-rate" class="bg-transparent text-slate-200 font-medium focus:outline-none cursor-pointer">
+                        <option value="0.82" class="bg-slate-900">Lenta</option>
+                        <option value="0.96" selected class="bg-slate-900">Normal</option>
+                        <option value="1.15" class="bg-slate-900">Rápida</option>
+                    </select>
+                </div>
+
+                <!-- Selector de Voz del Sistema (si hay varias en español) -->
+                <div id="voice-selector-wrapper" class="hidden sm:flex items-center bg-slate-800/90 border border-slate-700/70 rounded-xl px-3 py-1.5 text-xs sm:text-sm max-w-[180px]">
+                    <i class="fa-solid fa-user-tie text-sky-400 mr-2"></i>
+                    <select id="voice-select" class="bg-transparent text-slate-200 font-medium focus:outline-none cursor-pointer truncate w-full">
+                        <option value="" class="bg-slate-900">Voz Español (Auto)</option>
+                    </select>
+                </div>
+
+                <!-- Botón Activar / Silenciar Voz -->
+                <button id="toggle-voice-btn" type="button" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 font-semibold text-xs sm:text-sm transition cursor-pointer" title="Activar o desactivar locutor">
+                    <i id="voice-icon" class="fa-solid fa-volume-high"></i>
+                    <span id="voice-status-text">Voz Activa</span>
+                </button>
+
+                <!-- Botón Probar Sonido -->
+                <button id="test-voice-btn" type="button" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-medium transition cursor-pointer" title="Probar audio">
+                    <i class="fa-solid fa-play text-amber-400 text-xs"></i>
+                    <span>Probar</span>
+                </button>
+
+                <!-- Contador Escritorio -->
+                <div class="hidden lg:flex items-center gap-3 bg-slate-950/80 border border-slate-800 px-3.5 py-1.5 rounded-xl ml-1">
+                    <div class="text-right">
+                        <span class="text-[10px] uppercase tracking-widest text-slate-400 block font-semibold">Cantadas / Faltan</span>
+                        <span id="counter-desktop" class="font-display font-black text-lg text-amber-400 leading-none">0 <span class="text-slate-500 text-xs font-bold">/ 90</span></span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Cuerpo Principal: Grid Responsivo (Izquierda: Esfera Actual + Entrada + Historial | Derecha: Tablero 1-90) -->
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            
+            <!-- COLUMNA IZQUIERDA (5 columnas en escritorio): Esfera Gigante, Entrada Manual y Esferas Salidas -->
+            <section class="lg:col-span-5 flex flex-col gap-5">
+                
+                <!-- Tarjeta de Bola Actual e Ingreso de Número -->
+                <div class="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
+                    <!-- Resplandor ambiental de fondo -->
+                    <div id="ambient-glow" class="absolute -top-24 -left-24 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none transition-colors duration-500"></div>
+
+                    <div class="flex flex-col sm:flex-row items-center gap-6 relative z-10">
+                        
+                        <!-- Visualización de la Última Esfera (3D Gigante) -->
+                        <div class="flex flex-col items-center justify-center shrink-0">
+                            <span class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2.5">Última Bola</span>
+                            
+                            <div id="current-ball-container" class="relative flex items-center justify-center">
+                                <!-- Esfera Principal -->
+                                <div id="main-sphere" class="bingo-sphere ball-color-empty w-32 h-32 sm:w-36 sm:h-36">
+                                    <div class="bingo-sphere-inner w-20 h-20 sm:w-22 sm:h-22 text-4xl sm:text-5xl">
+                                        <span id="main-sphere-number" class="text-slate-400">--</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botón Repetir Canto -->
+                            <button id="repeat-voice-btn" type="button" disabled class="mt-3 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-800/90 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-700 text-xs font-semibold text-amber-300 transition cursor-pointer">
+                                <i class="fa-solid fa-repeat"></i>
+                                <span>Repetir Canto</span>
+                            </button>
+                        </div>
+
+                        <!-- Panel de Entrada y Acción Rápida -->
+                        <div class="flex-1 w-full flex flex-col justify-between">
+                            <div>
+                                <label for="number-input" class="block text-sm font-semibold text-slate-200 mb-1.5">
+                                    Ingresar bola (1 - 90)
+                                </label>
+                                <p class="text-xs text-slate-400 mb-3">
+                                    Escribe el número y presiona <kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-[11px] text-slate-300">Enter</kbd> para cantarlo.
+                                </p>
+
+                                <form id="call-form" class="flex gap-2">
+                                    <input 
+                                        type="number" 
+                                        id="number-input" 
+                                        min="1" 
+                                        max="90" 
+                                        placeholder="Ej: 25"
+                                        autocomplete="off"
+                                        class="w-full bg-slate-950 border-2 border-slate-700 focus:border-amber-400 rounded-xl px-4 py-3 text-2xl font-display font-black text-white placeholder-slate-600 focus:outline-none transition text-center"
+                                    >
+                                    <button 
+                                        type="submit" 
+                                        class="px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-sm sm:text-base shadow-lg shadow-amber-500/25 active:scale-95 transition flex items-center gap-2 shrink-0 cursor-pointer"
+                                    >
+                                        <i class="fa-solid fa-bullhorn"></i>
+                                        <span>Cantar Bola</span>
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Cintillo / Subtítulo animado del locutor -->
+                            <div id="phrase-banner" class="mt-3 min-h-[46px] px-3.5 py-2 rounded-xl bg-slate-950/85 border border-amber-500/25 flex items-center gap-2.5 text-xs sm:text-sm shadow-inner">
+                                <i class="fa-solid fa-volume-high text-amber-400 shrink-0"></i>
+                                <span id="current-phrase-text" class="italic text-slate-400 leading-snug">Esperando la primera bola...</span>
+                            </div>
+
+                            <!-- Botón Sacar Bola al Azar (Bombo automático opcional) -->
+                            <div class="mt-3 pt-3 border-t border-slate-800/80 flex items-center gap-2">
+                                <button id="random-ball-btn" type="button" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition active:scale-[0.99] cursor-pointer">
+                                    <i class="fa-solid fa-shuffle"></i>
+                                    <span>Sacar Bola al Azar</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta de Historial Visual de Esferas Salidas -->
+                <div class="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <h2 class="text-sm sm:text-base font-bold text-white uppercase tracking-wider">
+                                Esferas Salidas
+                            </h2>
+                        </div>
+                        <span class="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full font-medium">
+                            Orden de salida (Última #1)
+                        </span>
+                    </div>
+
+                    <!-- Leyenda rápida de colores por decena -->
+                    <div class="grid grid-cols-3 sm:grid-cols-5 gap-1.5 text-[10px] text-slate-400 mb-3 pb-2.5 border-b border-slate-800/80">
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span> 1-9</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-orange-500 inline-block"></span> 10-19</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span> 20-29</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span> 30-39</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-400 inline-block"></span> 40-49</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span> 50-59</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-violet-500 inline-block"></span> 60-69</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-pink-500 inline-block"></span> 70-79</span>
+                        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> 80-90</span>
+                    </div>
+
+                    <!-- Contenedor de Esferas Extraídas -->
+                    <div id="drawn-spheres-grid" class="min-h-[180px] max-h-[340px] overflow-y-auto custom-scrollbar p-2.5 bg-slate-950/60 rounded-xl border border-slate-800/80 flex flex-wrap content-start gap-2.5">
+                        <!-- Estado vacío inicial -->
+                        <div id="empty-history-msg" class="w-full h-40 flex flex-col items-center justify-center text-slate-500 text-center p-4">
+                            <i class="fa-solid fa-circle-dot text-3xl mb-2 opacity-40"></i>
+                            <p class="text-sm font-medium">Aún no han salido bolas</p>
+                            <p class="text-xs mt-0.5">Escribe un número o haz clic en el tablero para comenzar</p>
+                        </div>
+                    </div>
+
+                    <!-- Controles Inferiores: Deshacer y Reiniciar -->
+                    <div class="grid grid-cols-2 gap-3 mt-4">
+                        <button id="undo-btn" type="button" disabled class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-700 text-slate-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition cursor-pointer">
+                            <i class="fa-solid fa-rotate-left text-amber-400"></i>
+                            <span>Deshacer última bola</span>
+                        </button>
+                        <button id="reset-btn" type="button" class="py-2.5 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition cursor-pointer">
+                            <i class="fa-solid fa-trash-can"></i>
+                            <span>Nueva Partida</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- COLUMNA DERECHA (7 columnas en escritorio): Tablero Completo del 1 al 90 -->
+            <section class="lg:col-span-7 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-table-cells text-amber-400"></i>
+                            <span>Tablero General (1 al 90)</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Organizado por decenas (1-10 a 81-90). Toca cualquier número para cantarlo o desmarcarlo.</p>
+                    </div>
+
+                    <!-- Barra de progreso de partida y conteo -->
+                    <div class="flex items-center gap-3">
+                        <span id="remaining-badge" class="text-xs font-semibold text-slate-400 bg-slate-800/90 px-2.5 py-1 rounded-lg border border-slate-700/70">
+                            Faltan: 90
+                        </span>
+                        <div class="w-24 sm:w-32 bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700">
+                            <div id="progress-bar" class="bg-gradient-to-r from-amber-400 to-orange-500 h-full w-0 transition-all duration-300"></div>
+                        </div>
+                        <span id="progress-percent" class="text-xs font-bold text-slate-300 w-9 text-right">0%</span>
+                    </div>
+                </div>
+
+                <!-- Cuadrícula 9 filas x 10 columnas (1-10, 11-20, ..., 81-90) -->
+                <div id="bingo-board" class="grid grid-cols-5 sm:grid-cols-10 gap-1.5 sm:gap-2">
+                    <!-- Las 90 celdas se generan dinámicamente mediante JavaScript -->
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        /**
+         * Aplicación Panel de Bingo 90 Bolas con Locución Tradicional Exacta
+         * Canta: "Juega el veinticinco... dos y cinco... ¡veinticinco!" y "Juega el cinco... ¡solo el cinco!"
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- ESTADO DE LA APLICACIÓN ---
+            const STATE_KEY = 'bingo_master_90_state_v2';
+            let drawnNumbers = []; // Array ordenado: índice 0 es la bola más reciente
+            let voiceEnabled = true;
+            let voiceStyle = 'traditional'; // 'traditional' | 'rhyme' | 'fast'
+            let voiceRate = 0.96;
+            let selectedVoiceURI = '';
+            let availableSpanishVoices = [];
+
+            // Diccionario de dígitos individuales (0-9) en español natural
+            const DIGIT_WORDS = {
+                0: 'cero',
+                1: 'uno',
+                2: 'dos',
+                3: 'tres',
+                4: 'cuatro',
+                5: 'cinco',
+                6: 'seis',
+                7: 'siete',
+                8: 'ocho',
+                9: 'nueve'
+            };
+
+            // Diccionario completo de números del 1 al 90 en español natural para pronunciación perfecta
+            const NUMBER_WORDS = {
+                1: 'uno', 2: 'dos', 3: 'tres', 4: 'cuatro', 5: 'cinco',
+                6: 'seis', 7: 'siete', 8: 'ocho', 9: 'nueve', 10: 'diez',
+                11: 'once', 12: 'doce', 13: 'trece', 14: 'catorce', 15: 'quince',
+                16: 'dieciséis', 17: 'diecisiete', 18: 'dieciocho', 19: 'diecinueve', 20: 'veinte',
+                21: 'veintiuno', 22: 'veintidós', 23: 'veintitrés', 24: 'veinticuatro', 25: 'veinticinco',
+                26: 'veintiséis', 27: 'veintisiete', 28: 'veintiocho', 29: 'veintinueve', 30: 'treinta',
+                31: 'treinta y uno', 32: 'treinta y dos', 33: 'treinta y tres', 34: 'treinta y cuatro', 35: 'treinta y cinco',
+                36: 'treinta y seis', 37: 'treinta y siete', 38: 'treinta y ocho', 39: 'treinta y nueve', 40: 'cuarenta',
+                41: 'cuarenta y uno', 42: 'cuarenta y dos', 43: 'cuarenta y tres', 44: 'cuarenta y cuatro', 45: 'cuarenta y cinco',
+                46: 'cuarenta y seis', 47: 'cuarenta y siete', 48: 'cuarenta y ocho', 49: 'cuarenta y nueve', 50: 'cincuenta',
+                51: 'cincuenta y uno', 52: 'cincuenta y dos', 53: 'cincuenta y tres', 54: 'cincuenta y cuatro', 55: 'cincuenta y cinco',
+                56: 'cincuenta y seis', 57: 'cincuenta y siete', 58: 'cincuenta y ocho', 59: 'cincuenta y nueve', 60: 'sesenta',
+                61: 'sesenta y uno', 62: 'sesenta y dos', 63: 'sesenta y tres', 64: 'sesenta y cuatro', 65: 'sesenta y cinco',
+                66: 'sesenta y seis', 67: 'sesenta y siete', 68: 'sesenta y ocho', 69: 'sesenta y nueve', 70: 'setenta',
+                71: 'setenta y uno', 72: 'setenta y dos', 73: 'setenta y tres', 74: 'setenta y cuatro', 75: 'setenta y cinco',
+                76: 'setenta y seis', 77: 'setenta y siete', 78: 'setenta y ocho', 79: 'setenta y nueve', 80: 'ochenta',
+                81: 'ochenta y uno', 82: 'ochenta y dos', 83: 'ochenta y tres', 84: 'ochenta y cuatro', 85: 'ochenta y cinco',
+                86: 'ochenta y seis', 87: 'ochenta y siete', 88: 'ochenta y ocho', 89: 'ochenta y nueve', 90: 'noventa'
+            };
+
+            // Dichos populares del bingo tradicional para complementar el canto
+            const BINGO_RHYMES = {
+                1: "¡el galán!",
+                2: "¡el patito!",
+                3: "¡San Cono!",
+                4: "¡la cama!",
+                5: "¡el gato!",
+                6: "¡el perro!",
+                7: "¡el revólver!",
+                8: "¡el incendio!",
+                9: "¡el arroyo!",
+                10: "¡la rosa!",
+                11: "¡los palitos!",
+                12: "¡el soldado!",
+                13: "¡la mala pata!",
+                14: "¡el borracho!",
+                15: "¡la niña bonita!",
+                16: "¡el anillo!",
+                17: "¡la desgracia!",
+                18: "¡la sangre!",
+                19: "¡el pescado!",
+                20: "¡la fiesta!",
+                21: "¡la mujer!",
+                22: "¡los dos patitos!",
+                25: "¡Navidad!",
+                30: "¡Santa Rosa!",
+                32: "¡el dinero!",
+                33: "¡la edad de Cristo!",
+                40: "¡el cura!",
+                44: "¡las sillas!",
+                47: "¡el muerto!",
+                48: "¡el muerto que habla!",
+                50: "¡el pan!",
+                55: "¡los gallegos!",
+                60: "¡la virgen!",
+                66: "¡las lombrices!",
+                69: "¡arriba y abajo!",
+                70: "¡el sueño!",
+                77: "¡las piernas de mujer!",
+                80: "¡la bocha!",
+                88: "¡las dos calabazas!",
+                90: "¡el abuelo, la bola más grande!"
+            };
+
+            // --- REFERENCIAS AL DOM ---
+            const boardEl = document.getElementById('bingo-board');
+            const drawnGridEl = document.getElementById('drawn-spheres-grid');
+            const emptyHistoryMsg = document.getElementById('empty-history-msg');
+            const mainSphereEl = document.getElementById('main-sphere');
+            const mainSphereNumberEl = document.getElementById('main-sphere-number');
+            const callForm = document.getElementById('call-form');
+            const numberInput = document.getElementById('number-input');
+            const repeatVoiceBtn = document.getElementById('repeat-voice-btn');
+            const randomBallBtn = document.getElementById('random-ball-btn');
+            const undoBtn = document.getElementById('undo-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const toggleVoiceBtn = document.getElementById('toggle-voice-btn');
+            const voiceIcon = document.getElementById('voice-icon');
+            const voiceStatusText = document.getElementById('voice-status-text');
+            const testVoiceBtn = document.getElementById('test-voice-btn');
+            const voiceStyleSelect = document.getElementById('voice-style');
+            const voiceRateSelect = document.getElementById('voice-rate');
+            const voiceSelect = document.getElementById('voice-select');
+            const voiceSelectorWrapper = document.getElementById('voice-selector-wrapper');
+            const counterDesktop = document.getElementById('counter-desktop');
+            const counterMobile = document.getElementById('counter-mobile');
+            const remainingBadge = document.getElementById('remaining-badge');
+            const progressBar = document.getElementById('progress-bar');
+            const progressPercent = document.getElementById('progress-percent');
+            const currentPhraseText = document.getElementById('current-phrase-text');
+            const confirmModal = document.getElementById('confirm-modal');
+            const cancelResetBtn = document.getElementById('cancel-reset-btn');
+            const confirmResetBtn = document.getElementById('confirm-reset-btn');
+            const toastContainer = document.getElementById('toast-container');
+
+            // --- FUNCIONES DE UTILIDAD ---
+
+            /**
+             * Devuelve la clase CSS de color correspondiente a cada decena (1-9, 10-19, ..., 80-90)
+             */
+            function getBallColorClass(num) {
+                if (!num) return 'ball-color-empty';
+                if (num <= 9) return 'ball-dec-0';
+                if (num <= 19) return 'ball-dec-1';
+                if (num <= 29) return 'ball-dec-2';
+                if (num <= 39) return 'ball-dec-3';
+                if (num <= 49) return 'ball-dec-4';
+                if (num <= 59) return 'ball-dec-5';
+                if (num <= 69) return 'ball-dec-6';
+                if (num <= 79) return 'ball-dec-7';
+                return 'ball-dec-8';
+            }
+
+            /**
+             * Devuelve el color de acento para el tablero cuando un número está activo
+             */
+            function getBoardActiveClasses(num) {
+                if (num <= 9) return 'bg-gradient-to-br from-red-500 to-rose-700 text-white border-red-300';
+                if (num <= 19) return 'bg-gradient-to-br from-orange-500 to-amber-700 text-white border-orange-300';
+                if (num <= 29) return 'bg-gradient-to-br from-yellow-400 to-amber-600 text-slate-950 border-yellow-200';
+                if (num <= 39) return 'bg-gradient-to-br from-emerald-500 to-green-700 text-white border-emerald-300';
+                if (num <= 49) return 'bg-gradient-to-br from-cyan-400 to-teal-700 text-slate-950 border-cyan-200';
+                if (num <= 59) return 'bg-gradient-to-br from-blue-500 to-indigo-700 text-white border-blue-300';
+                if (num <= 69) return 'bg-gradient-to-br from-violet-500 to-purple-700 text-white border-violet-300';
+                if (num <= 79) return 'bg-gradient-to-br from-pink-500 to-rose-700 text-white border-pink-300';
+                return 'bg-gradient-to-br from-emerald-400 to-teal-800 text-white border-emerald-200';
+            }
+
+            /**
+             * Determina si el número lleva subrayado visual (6, 9, 66, 68, 86, 89)
+             */
+            function needsUnderline(num) {
+                return [6, 9, 66, 68, 86, 89].includes(num);
+            }
+
+            /**
+             * Muestra una notificación Toast elegante (sin alert)
+             */
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                const styles = {
+                    info: 'bg-slate-800 border-slate-700 text-slate-100',
+                    warning: 'bg-amber-950/95 border-amber-500/50 text-amber-200',
+                    error: 'bg-rose-950/95 border-rose-500/50 text-rose-200',
+                    success: 'bg-emerald-950/95 border-emerald-500/50 text-emerald-200'
+                };
+                const icons = {
+                    info: 'fa-circle-info text-sky-400',
+                    warning: 'fa-triangle-exclamation text-amber-400',
+                    error: 'fa-circle-exclamation text-rose-400',
+                    success: 'fa-circle-check text-emerald-400'
+                };
+
+                toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md text-sm font-medium transition-all duration-300 transform translate-y-0 opacity-100 ${styles[type]}`;
+                toast.innerHTML = `<i class="fa-solid ${icons[type]} text-base"></i><span>${message}</span>`;
+
+                toastContainer.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', '-translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }, 2800);
+            }
+
+            // --- SÍNTESIS DE VOZ (WEB SPEECH API) ---
+
+            /**
+             * Carga las voces en español disponibles en el navegador
+             */
+            function loadSpanishVoices() {
+                if (!('speechSynthesis' in window)) return;
+                const allVoices = window.speechSynthesis.getVoices();
+                availableSpanishVoices = allVoices.filter(v => v.lang.toLowerCase().startsWith('es'));
+
+                if (availableSpanishVoices.length > 0) {
+                    voiceSelectorWrapper.classList.remove('hidden');
+                    voiceSelectorWrapper.classList.add('flex');
+                    
+                    const currentSelection = voiceSelect.value || selectedVoiceURI;
+                    voiceSelect.innerHTML = '<option value="" class="bg-slate-900">Voz Español (Automática)</option>';
+                    
+                    availableSpanishVoices.forEach(voice => {
+                        const opt = document.createElement('option');
+                        opt.value = voice.voiceURI;
+                        opt.textContent = `${voice.name.replace(/Microsoft |Google /g, '')} (${voice.lang})`;
+                        opt.className = 'bg-slate-900';
+                        if (voice.voiceURI === currentSelection) opt.selected = true;
+                        voiceSelect.appendChild(opt);
+                    });
+                }
+            }
+
+            if ('speechSynthesis' in window) {
+                loadSpanishVoices();
+                window.speechSynthesis.onvoiceschanged = loadSpanishVoices;
+            }
+
+            /**
+             * Construye la locución tradicional exacta de bingo de salón/feria:
+             * - 1 cifra (1-9): "Juega el cinco... ¡solo el cinco!"
+             * - 2 cifras (10-90): "Juega el veinticinco... dos y cinco... ¡veinticinco!"
+             * Devuelve { speechText, displayText } para máxima claridad oral y visual.
+             */
+            function buildBingoCall(num) {
+                const fullWord = NUMBER_WORDS[num] || String(num);
+                const rhyme = BINGO_RHYMES[num];
+
+                if (num < 10) {
+                    // Números de 1 sola cifra (1 al 9)
+                    if (voiceStyle === 'fast') {
+                        return {
+                            speechText: `El ${fullWord}, ¡solo el ${fullWord}!`,
+                            displayText: `El ${num}, ¡solo el ${fullWord}!`
+                        };
+                    }
+                    if (voiceStyle === 'rhyme' && rhyme) {
+                        return {
+                            speechText: `Juega el ${fullWord}... ¡solo el ${fullWord}!... ${rhyme}`,
+                            displayText: `Juega el ${num}... ¡solo el ${fullWord}! ${rhyme}`
+                        };
+                    }
+                    return {
+                        speechText: `Juega el ${fullWord}... ¡solo el ${fullWord}!`,
+                        displayText: `Juega el ${num}... ¡solo el ${fullWord}!`
+                    };
+                } else {
+                    // Números de 2 cifras (10 al 90): descomponer decena y unidad
+                    const tensDigit = Math.floor(num / 10);
+                    const onesDigit = num % 10;
+                    const d1Word = DIGIT_WORDS[tensDigit];
+                    const d2Word = DIGIT_WORDS[onesDigit];
+
+                    if (voiceStyle === 'fast') {
+                        return {
+                            speechText: `El ${fullWord}, ${d1Word} y ${d2Word}.`,
+                            displayText: `El ${num}, ${d1Word} y ${d2Word}.`
+                        };
+                    }
+                    if (voiceStyle === 'rhyme' && rhyme) {
+                        return {
+                            speechText: `Juega el ${fullWord}... ${d1Word} y ${d2Word}... ¡${fullWord}!... ${rhyme}`,
+                            displayText: `Juega el ${num}... ${d1Word} y ${d2Word}... ¡${fullWord}! ${rhyme}`
+                        };
+                    }
+                    return {
+                        speechText: `Juega el ${fullWord}... ${d1Word} y ${d2Word}... ¡${fullWord}!`,
+                        displayText: `Juega el ${num}... ${d1Word} y ${d2Word}... ¡${fullWord}!`
+                    };
+                }
+            }
+
+            /**
+             * Canta en voz alta el objeto de locución o texto directo usando speechSynthesis
+             */
+            function speakCall(callData) {
+                const speechText = typeof callData === 'string' ? callData : callData.speechText;
+                const displayText = typeof callData === 'string' ? callData : callData.displayText;
+
+                // Actualizar subtítulo visual animado
+                currentPhraseText.textContent = displayText;
+                currentPhraseText.classList.remove('text-slate-400', 'italic');
+                currentPhraseText.classList.add('text-amber-300', 'font-semibold');
+
+                if (!voiceEnabled) return;
+                if (!('speechSynthesis' in window)) {
+                    showToast('Tu navegador no soporta síntesis de voz.', 'warning');
+                    return;
+                }
+
+                try {
+                    window.speechSynthesis.cancel();
+
+                    const utterance = new SpeechSynthesisUtterance(speechText);
+                    utterance.lang = 'es-ES';
+                    utterance.rate = voiceRate;
+                    utterance.pitch = 1.05;
+
+                    if (selectedVoiceURI) {
+                        const chosen = availableSpanishVoices.find(v => v.voiceURI === selectedVoiceURI);
+                        if (chosen) utterance.voice = chosen;
+                    } else if (availableSpanishVoices.length > 0) {
+                        const preferred = availableSpanishVoices.find(v => v.name.includes('Google') || v.name.includes('Natural')) || availableSpanishVoices[0];
+                        utterance.voice = preferred;
+                    }
+
+                    window.speechSynthesis.speak(utterance);
+                } catch (err) {
+                    console.error('Error en síntesis de voz:', err);
+                }
+            }
+
+            // --- RENDERIZADO Y LÓGICA DEL JUEGO ---
+
+            /**
+             * Genera las 90 celdas iniciales del tablero organizadas por filas de decenas (1-10, 11-20, ..., 81-90)
+             */
+            function initBoard() {
+                boardEl.innerHTML = '';
+                for (let i = 1; i <= 90; i++) {
+                    const cell = document.createElement('button');
+                    cell.type = 'button';
+                    cell.id = `board-cell-${i}`;
+                    cell.dataset.number = i;
+                    cell.textContent = i;
+                    cell.className = 'aspect-square sm:aspect-auto sm:h-11 md:h-12 rounded-xl font-display font-bold text-base sm:text-lg border transition-all duration-200 flex items-center justify-center cursor-pointer select-none bg-slate-800/70 hover:bg-slate-700/90 text-slate-400 border-slate-700/60';
+                    
+                    cell.addEventListener('click', () => handleBoardCellClick(i));
+                    boardEl.appendChild(cell);
+                }
+            }
+
+            /**
+             * Actualiza toda la interfaz visual según el array `drawnNumbers`
+             */
+            function renderAll() {
+                const count = drawnNumbers.length;
+                const remaining = 90 - count;
+                const latestNumber = count > 0 ? drawnNumbers[0] : null;
+
+                // 1. Actualizar contadores y barra de progreso
+                counterDesktop.innerHTML = `${count} <span class="text-slate-500 text-xs font-bold">/ 90</span> <span class="text-slate-400 text-xs font-normal">(Faltan ${remaining})</span>`;
+                counterMobile.innerHTML = `${count} <span class="text-slate-500 text-sm">/ 90</span>`;
+                remainingBadge.textContent = `Faltan: ${remaining}`;
+                const pct = Math.round((count / 90) * 100);
+                progressBar.style.width = `${pct}%`;
+                progressPercent.textContent = `${pct}%`;
+
+                // 2. Actualizar Esfera Gigante Principal
+                mainSphereEl.className = `bingo-sphere w-32 h-32 sm:w-36 sm:h-36 ${getBallColorClass(latestNumber)}`;
+                if (latestNumber !== null) {
+                    mainSphereEl.classList.remove('animate-pop-ball');
+                    void mainSphereEl.offsetWidth; // Reflow
+                    mainSphereEl.classList.add('animate-pop-ball');
+
+                    mainSphereNumberEl.textContent = latestNumber;
+                    mainSphereNumberEl.className = `text-slate-900 ${needsUnderline(latestNumber) ? 'number-underline' : ''}`;
+                    repeatVoiceBtn.disabled = false;
+                } else {
+                    mainSphereNumberEl.textContent = '--';
+                    mainSphereNumberEl.className = 'text-slate-400';
+                    repeatVoiceBtn.disabled = true;
+                    currentPhraseText.textContent = 'Esperando la primera bola...';
+                    currentPhraseText.className = 'italic text-slate-400';
+                }
+
+                // 3. Actualizar Tablero (1-90)
+                const drawnSet = new Set(drawnNumbers);
+                for (let i = 1; i <= 90; i++) {
+                    const cell = document.getElementById(`board-cell-${i}`);
+                    if (!cell) continue;
+
+                    if (drawnSet.has(i)) {
+                        const isLatest = i === latestNumber;
+                        cell.className = `aspect-square sm:aspect-auto sm:h-11 md:h-12 rounded-xl font-display font-black text-base sm:text-lg border-2 transition-all duration-200 flex items-center justify-center cursor-pointer select-none board-cell-active ${getBoardActiveClasses(i)} ${isLatest ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900 z-10' : ''}`;
+                    } else {
+                        cell.className = 'aspect-square sm:aspect-auto sm:h-11 md:h-12 rounded-xl font-display font-bold text-base sm:text-lg border transition-all duration-200 flex items-center justify-center cursor-pointer select-none bg-slate-800/60 hover:bg-slate-700/90 text-slate-400 hover:text-white border-slate-700/50';
+                    }
+                }
+
+                // 4. Actualizar Historial de Esferas Salidas
+                renderHistorySpheres();
+
+                // 5. Estado de botones
+                undoBtn.disabled = count === 0;
+                randomBallBtn.disabled = count >= 90;
+
+                // 6. Guardar en localStorage
+                saveState();
+            }
+
+            /**
+             * Renderiza las esferas 3D en el panel de historial lateral con indicador de orden de salida
+             */
+            function renderHistorySpheres() {
+                drawnGridEl.innerHTML = '';
+
+                if (drawnNumbers.length === 0) {
+                    drawnGridEl.appendChild(emptyHistoryMsg);
+                    return;
+                }
+
+                const totalDrawn = drawnNumbers.length;
+
+                drawnNumbers.forEach((num, idx) => {
+                    const drawOrder = totalDrawn - idx; // #1 fue la primera bola en salir
+                    const isFirst = idx === 0;
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'relative group';
+
+                    const sphere = document.createElement('div');
+                    sphere.className = `bingo-sphere ${getBallColorClass(num)} w-12 h-12 sm:w-13 sm:h-13 shrink-0 cursor-pointer hover:scale-110 ${isFirst ? 'animate-sphere-item ring-2 ring-amber-300 ring-offset-2 ring-offset-slate-950' : ''}`;
+                    sphere.title = isFirst
+                        ? `Última bola (#${drawOrder}): ${num} — Clic para repetir canto`
+                        : `Bola #${drawOrder}: ${num} — Clic para repetir canto`;
+
+                    const inner = document.createElement('div');
+                    inner.className = `bingo-sphere-inner w-7 h-7 sm:w-8 sm:h-8 text-sm sm:text-base ${needsUnderline(num) ? 'number-underline' : ''}`;
+                    inner.textContent = num;
+
+                    // Etiqueta discreta del orden de salida (#1, #2, ...)
+                    const orderTag = document.createElement('span');
+                    orderTag.className = `absolute -bottom-1 -right-1 px-1 min-w-[18px] h-[16px] rounded-full text-[9px] font-bold flex items-center justify-center border shadow ${isFirst ? 'bg-amber-400 text-slate-950 border-amber-200' : 'bg-slate-900/95 text-slate-300 border-slate-700'}`;
+                    orderTag.textContent = `#${drawOrder}`;
+
+                    sphere.appendChild(inner);
+                    wrapper.appendChild(sphere);
+                    wrapper.appendChild(orderTag);
+
+                    // Al hacer clic en una esfera del historial, la vuelve a cantar
+                    wrapper.addEventListener('click', () => {
+                        const callData = buildBingoCall(num);
+                        speakCall(callData);
+                    });
+
+                    drawnGridEl.appendChild(wrapper);
+                });
+            }
+
+            /**
+             * Agrega un número nuevo al juego y lo canta con el formato tradicional
+             */
+            function callNumber(num) {
+                const parsed = parseInt(num, 10);
+
+                if (isNaN(parsed) || parsed < 1 || parsed > 90) {
+                    showToast('Por favor ingresa un número válido entre 1 y 90.', 'error');
+                    return false;
+                }
+
+                if (drawnNumbers.includes(parsed)) {
+                    showToast(`¡El número ${parsed} ya salió anteriormente!`, 'warning');
+                    const word = NUMBER_WORDS[parsed] || parsed;
+                    speakCall({
+                        speechText: `El ${word}, ya salió anteriormente`,
+                        displayText: `El ${parsed} ya salió anteriormente`
+                    });
+                    return false;
+                }
+
+                // Agregar al inicio del historial (más reciente primero)
+                drawnNumbers.unshift(parsed);
+                renderAll();
+
+                // Cantar el número con la locución tradicional completa
+                const callData = buildBingoCall(parsed);
+                speakCall(callData);
+
+                if (drawnNumbers.length === 90) {
+                    showToast('¡Han salido las 90 bolas del bombo!', 'success');
+                }
+
+                return true;
+            }
+
+            /**
+             * Elimina un número específico (usado al desmarcar en el tablero o deshacer)
+             */
+            function removeNumber(num) {
+                const index = drawnNumbers.indexOf(num);
+                if (index !== -1) {
+                    drawnNumbers.splice(index, 1);
+                    renderAll();
+                    showToast(`Se retiró el número ${num} del tablero.`, 'info');
+                }
+            }
+
+            /**
+             * Maneja el clic directo sobre una celda del tablero 1-90
+             */
+            function handleBoardCellClick(num) {
+                if (drawnNumbers.includes(num)) {
+                    removeNumber(num);
+                } else {
+                    callNumber(num);
+                }
+            }
+
+            /**
+             * Saca una bola aleatoria entre los números que aún no han salido
+             */
+            function drawRandomBall() {
+                if (drawnNumbers.length >= 90) {
+                    showToast('Ya han salido todos los números (1 al 90).', 'info');
+                    return;
+                }
+
+                const drawnSet = new Set(drawnNumbers);
+                const remaining = [];
+                for (let i = 1; i <= 90; i++) {
+                    if (!drawnSet.has(i)) remaining.push(i);
+                }
+
+                const randomIndex = Math.floor(Math.random() * remaining.length);
+                const chosen = remaining[randomIndex];
+                callNumber(chosen);
+            }
+
+            // --- PERSISTENCIA EN LOCALSTORAGE ---
+            function saveState() {
+                try {
+                    const data = {
+                        drawnNumbers,
+                        voiceEnabled,
+                        voiceStyle,
+                        voiceRate,
+                        selectedVoiceURI
+                    };
+                    localStorage.setItem(STATE_KEY, JSON.stringify(data));
+                } catch (e) {
+                    // Ignorar errores de almacenamiento privado
+                }
+            }
+
+            function loadState() {
+                try {
+                    const raw = localStorage.getItem(STATE_KEY);
+                    if (!raw) return;
+                    const data = JSON.parse(raw);
+                    if (Array.isArray(data.drawnNumbers)) {
+                        drawnNumbers = data.drawnNumbers.filter(n => Number.isInteger(n) && n >= 1 && n <= 90);
+                    }
+                    if (typeof data.voiceEnabled === 'boolean') {
+                        voiceEnabled = data.voiceEnabled;
+                    }
+                    if (data.voiceStyle) {
+                        voiceStyle = data.voiceStyle;
+                        voiceStyleSelect.value = voiceStyle;
+                    }
+                    if (typeof data.voiceRate === 'number') {
+                        voiceRate = data.voiceRate;
+                        voiceRateSelect.value = String(voiceRate);
+                    }
+                    if (data.selectedVoiceURI) {
+                        selectedVoiceURI = data.selectedVoiceURI;
+                    }
+                } catch (e) {
+                    console.error('No se pudo cargar estado previo', e);
+                }
+            }
+
+            function updateVoiceButtonUI() {
+                if (voiceEnabled) {
+                    toggleVoiceBtn.className = 'flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 font-semibold text-xs sm:text-sm transition cursor-pointer';
+                    voiceIcon.className = 'fa-solid fa-volume-high';
+                    voiceStatusText.textContent = 'Voz Activa';
+                } else {
+                    toggleVoiceBtn.className = 'flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 hover:text-slate-200 font-semibold text-xs sm:text-sm transition cursor-pointer';
+                    voiceIcon.className = 'fa-solid fa-volume-xmark';
+                    voiceStatusText.textContent = 'Silenciado';
+                }
+            }
+
+            // --- EVENT LISTENERS ---
+
+            // Formulario de ingreso manual
+            callForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const val = numberInput.value.trim();
+                if (!val) return;
+                
+                callNumber(val);
+                numberInput.value = '';
+                numberInput.focus();
+            });
+
+            // Limitar entrada a 2 dígitos
+            numberInput.addEventListener('input', () => {
+                if (numberInput.value.length > 2) {
+                    numberInput.value = numberInput.value.slice(0, 2);
+                }
+            });
+
+            // Repetir último canto
+            repeatVoiceBtn.addEventListener('click', () => {
+                if (drawnNumbers.length > 0) {
+                    const callData = buildBingoCall(drawnNumbers[0]);
+                    speakCall(callData);
+                }
+            });
+
+            // Sacar bola aleatoria
+            randomBallBtn.addEventListener('click', drawRandomBall);
+
+            // Deshacer última bola
+            undoBtn.addEventListener('click', () => {
+                if (drawnNumbers.length === 0) return;
+                const removed = drawnNumbers.shift();
+                renderAll();
+                showToast(`Se deshizo la última bola (${removed}).`, 'info');
+            });
+
+            // Abrir modal de confirmación para reiniciar
+            resetBtn.addEventListener('click', () => {
+                if (drawnNumbers.length === 0) {
+                    showToast('El tablero ya está limpio.', 'info');
+                    return;
+                }
+                confirmModal.classList.remove('hidden');
+                confirmModal.classList.add('flex');
+            });
+
+            cancelResetBtn.addEventListener('click', () => {
+                confirmModal.classList.add('hidden');
+                confirmModal.classList.remove('flex');
+            });
+
+            confirmResetBtn.addEventListener('click', () => {
+                drawnNumbers = [];
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                }
+                renderAll();
+                confirmModal.classList.add('hidden');
+                confirmModal.classList.remove('flex');
+                showToast('Nueva partida iniciada. ¡Buena suerte!', 'success');
+                numberInput.focus();
+            });
+
+            // Cerrar modal con tecla Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !confirmModal.classList.contains('hidden')) {
+                    confirmModal.classList.add('hidden');
+                    confirmModal.classList.remove('flex');
+                }
+            });
+
+            // Activar / Desactivar voz
+            toggleVoiceBtn.addEventListener('click', () => {
+                voiceEnabled = !voiceEnabled;
+                if (!voiceEnabled && 'speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                }
+                updateVoiceButtonUI();
+                saveState();
+                showToast(voiceEnabled ? 'Locutor de voz activado.' : 'Locutor silenciado.', 'info');
+            });
+
+            // Probar audio con ejemplo tradicional del 25
+            testVoiceBtn.addEventListener('click', () => {
+                const prevEnabled = voiceEnabled;
+                voiceEnabled = true;
+                speakCall({
+                    speechText: 'Juega el veinticinco... dos y cinco... ¡veinticinco!',
+                    displayText: 'Prueba: Juega el 25... dos y cinco... ¡veinticinco!'
+                });
+                voiceEnabled = prevEnabled;
+            });
+
+            // Cambiar estilo de locución
+            voiceStyleSelect.addEventListener('change', (e) => {
+                voiceStyle = e.target.value;
+                saveState();
+            });
+
+            // Cambiar velocidad de voz
+            voiceRateSelect.addEventListener('change', (e) => {
+                voiceRate = parseFloat(e.target.value) || 0.96;
+                saveState();
+            });
+
+            // Cambiar voz del sistema
+            voiceSelect.addEventListener('change', (e) => {
+                selectedVoiceURI = e.target.value;
+                saveState();
+            });
+
+            // --- INICIALIZACIÓN ---
+            initBoard();
+            loadState();
+            updateVoiceButtonUI();
+            renderAll();
+            numberInput.focus();
+        });
+    </script>
+</body>
+</html>
